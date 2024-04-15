@@ -8,6 +8,6 @@ import (
 func SetupRoutes(app *fiber.App) {
 	// API endpoints
 	app.Post("/shorten-url", handler.ShortenURLHandler)
-	//app.Get("/:shortURL", RedirectURL)
-	//app.Get("/metrics", GetMetrics)
+	app.Post("/redirect", handler.RedirectURLHandler)
+	app.Get("/metrics", handler.GetMetricsHandler)
 }
