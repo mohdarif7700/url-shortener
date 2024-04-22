@@ -2,7 +2,9 @@ package service
 
 import (
 	"errors"
+	"github.com/gofiber/fiber/v2"
 	"github.com/url-shortener/models"
+	"log"
 	"sort"
 	"sync"
 )
@@ -28,26 +30,29 @@ func CreateShortenURL(req models.ShortenURLRequest) (models.ShortenURLResponse, 
 	shortURL := CreateShortLink(req.OriginalURL)
 
 	// Store the mapping of long URL to short URL
-	urlMap[shortURL] = req.OriginalURL
+	urlMap[req.OriginalURL] = shortURL
 	return models.ShortenURLResponse{
 		OriginalURL:  req.OriginalURL,
 		ShortenedURL: shortURL,
 	}, nil
 }
 
-func RedirectURL(req models.RedirectURLRequest) (string, error) {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	// Check if the short URL exists in the map
-	longURL, ok := urlMap[req.ShortURL]
-	if !ok {
-		return "", errors.New("not found")
+func RedirectURL(ctx *fiber.Ctx, shortURL string) error {
+	longURL := findLongURL(shortURL)
+	if longURL == "" {
+		return errors.New("short url not found")
 	}
 
-	// Increment domain count for metrics
+	// Attempt to redirect to the original URL
+	if err := ctx.Redirect(longURL, fiber.StatusFound); err != nil {
+		// Error occurred during redirection, log the error
+		log.Printf("Error redirecting to %s: %v", longURL, err)
+		// Return an internal server error response
+		return err
+	}
+
 	domainMap[longURL]++
-	return longURL, nil
+	return nil
 }
 
 func GetMetrics() (map[string]int, error) {
@@ -74,4 +79,14 @@ func GetMetrics() (map[string]int, error) {
 	}
 
 	return topDomains, nil
+}
+
+// FindShortURL fetches URL from memory if exists
+func findLongURL(shorturl string) string {
+	for key, value := range urlMap {
+		if value == shorturl {
+			return key
+		}
+	}
+	return ""
 }

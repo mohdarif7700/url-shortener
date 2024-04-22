@@ -22,18 +22,16 @@ func ShortenURLHandler(ctx *fiber.Ctx) error {
 }
 
 func RedirectURLHandler(ctx *fiber.Ctx) error {
-	req := models.RedirectURLRequest{}
-	err := ctx.BodyParser(&req)
+	shortURL := ctx.Query("shortURL", "")
+	if shortURL == "" {
+		return ctx.Status(500).JSON(fiber.Map{"status": "error", "message": "Enter correct shortURL in query params"})
+	}
+	err := service.RedirectURL(ctx, shortURL)
 	if err != nil {
-		return ctx.Status(500).JSON(fiber.Map{"status": "error", "message": "Something's wrong with your input", "data": err.Error()})
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "data": err.Error()})
 	}
 
-	resp, err := service.RedirectURL(req)
-	if err != nil {
-		return ctx.Status(404).JSON(fiber.Map{"status": "error", "data": err})
-	}
-
-	return ctx.Status(301).JSON(fiber.Map{"status": "success", "redirectingToURL": resp})
+	return ctx.Status(301).JSON(fiber.Map{"status": "success"})
 }
 
 func GetMetricsHandler(ctx *fiber.Ctx) error {
